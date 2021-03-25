@@ -76,7 +76,7 @@ def webp():
 			with open(convertido, "rb") as file:
 				encoded_string = b64encode(file.read()).decode("utf-8")
 
-			return {'status': 200,'sucess':True, 'content': encoded_string}
+			return {'status': 200,'sucess':True, 'content': encoded_string, 'nome': f"{(nome+'.webp')}"}
 
 
 		else:
