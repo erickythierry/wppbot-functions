@@ -5,7 +5,7 @@ from subprocess import Popen, PIPE, STDOUT
 import json
 import os
 from flask import Flask, request, url_for, render_template
-
+from base64 import b64decode, b64encode
 
 
 diretorio = os.getcwd()+'/'
@@ -57,8 +57,29 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-	return 'oi'
+	return 'wppbot functions'
 
 
-if __name__ == "__main__":
-    app.run()
+@app.route("/webp", methods=['GET', 'POST'])
+def webp():
+	conteudo = request.json
+	if conteudo != None:
+		if 'arquivo' in conteudo and 'nome' in conteudo:
+			arquivo = conteudo['arquivo']
+			nome = conteudo['nome']
+			bytes = b64decode(arquivo, validate=True)
+			f = open(diretorio+nome, 'wb')
+			f.write(bytes)
+			f.close()
+
+			convertido = convert_to_webp(diretorio+nome)
+			with open(convertido, "rb") as file:
+				encoded_string = b64encode(file.read())
+
+			return {'status': 200,'sucess':True, 'content': encoded_string}
+
+
+		else:
+			return {'status': 200,'sucess':False, 'content':'falta de elemento no json'}
+	else:
+		return {'status': 200, 'sucess':False, 'content':'json nao recebido'}
