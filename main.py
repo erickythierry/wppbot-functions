@@ -4,8 +4,10 @@ import random
 from subprocess import Popen, PIPE, STDOUT
 import json
 import os
-from flask import Flask, request, url_for, render_template
+from flask import Flask, request, url_for, render_template, send_file
 from base64 import b64decode, b64encode
+from werkzeug.utils import secure_filename
+from youtube_search import YoutubeSearch
 
 
 diretorio = os.getcwd()+'/'
@@ -57,29 +59,45 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-	return 'wppbot functions'
+	return render_template("index.html")
 
 
-@app.route("/webp", methods=['GET', 'POST'])
-def webp():
-	conteudo = request.json
-	if conteudo != None:
-		if 'arquivo' in conteudo and 'nome' in conteudo:
-			arquivo = conteudo['arquivo']
-			nome = conteudo['nome']
-			bytes = b64decode(arquivo, validate=True)
-			f = open(diretorio+nome, 'wb')
-			f.write(bytes)
-			f.close()
-
-			convertido = convert_to_webp(diretorio+nome)
-			with open(convertido, "rb") as file:
-				encoded_string = b64encode(file.read()).decode("utf-8")
-
-			return {'status': 200,'sucess':True, 'content': encoded_string, 'nome': f"{(nome+'.webp')}"}
-
-
-		else:
-			return {'status': 200,'sucess':False, 'content':'falta de elemento no json'}
+@app.route("/files/<nome>")
+def file(nome):
+	arquivo = diretorio+'arquivos/'+nome
+	if os.path.isfile(arquivo):
+		return send_file(arquivo, as_attachment=True)
 	else:
-		return {'status': 200, 'sucess':False, 'content':'json nao recebido'}
+		return 'arquivo nao encontrado'
+
+
+
+@app.route("/2webp", methods=['GET', 'POST'])
+def webp2():
+	local = diretorio+'arquivos/'
+	if request.method == 'POST':
+		arquivo = request.files['file']
+		nome = secure_filename(arquivo.filename)
+		if '.mp4' in nome:
+			arquivo.save(local+nome)
+			convertido = convert_to_webp(local+nome)
+			convertido = convertido.replace(local, '')
+			return {'status': 200,'sucess':True, 'content': 'https://33a9be1a27ff.ngrok.io/files/'+convertido, 'nome': convertido}
+		else:
+			return {'status': 200,'sucess':False,'content': 'precisa ser mp4'}
+	else:
+		return 'apenas POST'
+
+
+@app.route("/buscar", methods=["GET", "POST"])
+def buscaVideo():
+	data = request.form
+	textoBusca = data.get("texto")
+	numeroDeResultados = int(data.get("num"))
+	if numeroDeResultados == None or numeroDeResultados == 0 or not numeroDeResultados:
+		numeroDeResultados = 3
+	
+	results = YoutubeSearch(textoBusca, max_results=numeroDeResultados).to_dict()
+	results = json.dumps(results, ensure_ascii=False)
+	return results
+
